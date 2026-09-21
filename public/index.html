@@ -72,8 +72,8 @@
           </div>
           <div class="grid gap-3 sm:grid-cols-3 md:grid-cols-1">
             <div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Latency</span><span>ms</span></div><div class="mt-2 font-display text-3xl text-white"><span id="ping-value">--</span><span class="ml-1 text-sm text-slate-500">ms</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="ping-bar" class="h-full w-0 rounded-full bg-cyan-300 transition-all duration-700"></div></div></div>
-            <div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Download</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="download-value">--</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="download-bar" class="h-full w-0 rounded-full bg-indigo-300 transition-all duration-700"></div></div></div>
-            <div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Upload</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="upload-value">--</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="upload-bar" class="h-full w-0 rounded-full bg-violet-300 transition-all duration-700"></div></div></div>
+            <div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Download</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="download-value">--</span><span id="download-unit" class="ml-1 text-sm text-slate-500">Mbps</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="download-bar" class="h-full w-0 rounded-full bg-indigo-300 transition-all duration-700"></div></div></div>
+            <div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Upload</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="upload-value">--</span><span id="upload-unit" class="ml-1 text-sm text-slate-500">Mbps</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="upload-bar" class="h-full w-0 rounded-full bg-violet-300 transition-all duration-700"></div></div></div>
           </div>
         </div>
         
@@ -108,8 +108,22 @@
     const endpoint = (path) => `${path}${path.includes('?') ? '&' : '?'}cache=${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const setText = (id, value) => { $(id).textContent = value; };
     const setBar = (id, percent) => { $(id).style.width = `${Math.max(3, Math.min(100, percent))}%`; };
-    const formatSpeed = (megabits) => megabits < 1 ? { value: `${(megabits * 1000).toFixed(0)}`, unit: 'Kbps' } : { value: megabits.toFixed(1), unit: 'Mbps' };
-    const showSpeed = (id, megabits) => { const speed = formatSpeed(megabits); setText(id, speed.value); if (id === 'hero-value') setText('hero-unit', speed.unit); return speed; };
+    const formatSpeed = (megabits) => {
+      const mbps = Number.isFinite(megabits) ? Math.max(0, megabits) : 0;
+      if (mbps < 1) {
+        const kbps = mbps * 1000;
+        return { value: kbps >= 100 ? kbps.toFixed(0) : kbps.toFixed(1), unit: 'Kbps' };
+      }
+      return { value: mbps >= 100 ? mbps.toFixed(0) : mbps.toFixed(1), unit: 'Mbps' };
+    };
+    const showSpeed = (id, megabits) => {
+      const speed = formatSpeed(megabits);
+      setText(id, speed.value);
+      if (id === 'hero-value') setText('hero-unit', speed.unit);
+      if (id === 'download-value') setText('download-unit', speed.unit);
+      if (id === 'upload-value') setText('upload-unit', speed.unit);
+      return speed;
+    };
     function stopLiveProgress() {
       if (state.progressTimer) clearInterval(state.progressTimer);
       state.progressTimer = null;
@@ -123,10 +137,10 @@
           const ping = Math.round(18 + Math.abs(Math.sin(tick / 2)) * 22);
           setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping));
         } else {
-          const value = Number((28 + Math.abs(Math.sin(tick / 2.5)) * 42 + Math.random() * 8).toFixed(1));
-          showSpeed('hero-value', value); showSpeed(phase === 'download' ? 'download-value' : 'upload-value', value);
-          setBar(`${phase}-bar`, Math.min(100, value / 5));
-          if (phase === 'download') $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, value * 4)}`;
+          const percent = Math.min(95, 8 + tick * 3);
+          setBar(`${phase}-bar`, percent);
+          setText('hero-value', '…');
+          if (phase === 'download') $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(560, percent * 5.6)}`;
         }
       }, 180);
     }
@@ -157,24 +171,67 @@
     }
     async function measurePing() {
       const samples = [];
-      for (let i = 0; i < 3; i++) { const started = performance.now(); const response = await fetch(endpoint('/api/ping'), { cache: 'no-store' }); if (!response.ok) throw new Error('Ping route unavailable'); samples.push(performance.now() - started); }
-      return Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
-    }
-    async function measureDownload() {
-      const sizes = [16, 64, 256, 1024, 4096]; let totalBytes = 0; const started = performance.now(); let sizeIndex = 0;
-      while (sizeIndex < 8) {
-        const size = sizes[Math.min(sizeIndex, sizes.length - 1)]; const response = await fetch(endpoint(`/api/download?size=${size}`), { cache: 'no-store' }); if (!response.ok || !response.body) throw new Error('Download route unavailable');
-        const reader = response.body.getReader(); let sampleBytes = 0; let reading = true;
-        while (reading) { const chunk = await reader.read(); if (chunk.done) { reading = false; } else { sampleBytes += chunk.value.byteLength; totalBytes += chunk.value.byteLength; const elapsed = (performance.now() - started) / 1000; const liveMbps = (totalBytes * 8) / elapsed / 1000000; showSpeed('hero-value', liveMbps); showSpeed('download-value', liveMbps); setBar('download-bar', Math.min(100, liveMbps / 5)); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, liveMbps * 4)}`; } }
-        const elapsed = (performance.now() - started) / 1000; if (elapsed >= 1.2 || sampleBytes < size * 1024) break; sizeIndex += 1;
+      for (let i = 0; i < 5; i++) {
+        const started = performance.now();
+        const response = await fetch(endpoint('/api/ping'), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Ping route unavailable');
+        await response.text();
+        samples.push(performance.now() - started);
       }
-      return Math.max(0.001, (totalBytes * 8) / ((performance.now() - started) / 1000) / 1000000);
+      samples.sort((a, b) => a - b);
+      return Math.round(samples[Math.floor(samples.length / 2)]);
     }
+
+    async function measureDownload() {
+      const samples = [];
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const started = performance.now();
+        const response = await fetch(endpoint('/api/download?size=4096'), { cache: 'no-store' });
+        if (!response.ok || !response.body) throw new Error('Download route unavailable');
+        const reader = response.body.getReader();
+        let bytes = 0;
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          bytes += chunk.value.byteLength;
+          const elapsed = Math.max(0.001, (performance.now() - started) / 1000);
+          const liveMbps = (bytes * 8) / elapsed / 1000000;
+          showSpeed('hero-value', liveMbps);
+          showSpeed('download-value', liveMbps);
+          setBar('download-bar', Math.min(100, liveMbps / 5));
+          $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, liveMbps * 4)}`;
+        }
+        const seconds = Math.max(0.001, (performance.now() - started) / 1000);
+        if (bytes >= 1024 * 1024) samples.push((bytes * 8) / seconds / 1000000);
+      }
+      if (!samples.length) throw new Error('Download sample too small');
+      samples.sort((a, b) => a - b);
+      return samples[Math.floor(samples.length / 2)];
+    }
+
     async function measureUpload() {
-      const payload = new Blob([new Uint8Array(1024 * 1024)]); const started = performance.now();
-      const response = await fetch(endpoint('/api/ping'), { method: 'POST', body: payload, cache: 'no-store' }); if (!response.ok) throw new Error('Upload route unavailable');
-      return Math.max(0.001, (payload.size * 8) / ((performance.now() - started) / 1000) / 1000000);
+      const samples = [];
+      const payload = new Blob([new Uint8Array(2 * 1024 * 1024)]);
+      for (let i = 0; i < 3; i++) {
+        const started = performance.now();
+        const response = await fetch(endpoint('/api/upload'), {
+          method: 'POST',
+          body: payload,
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/octet-stream' }
+        });
+        if (!response.ok) throw new Error('Upload route unavailable');
+        const result = await response.json();
+        const seconds = Math.max(0.001, (performance.now() - started) / 1000);
+        const bytes = Number(result.received) || payload.size;
+        if (bytes > 0) samples.push((bytes * 8) / seconds / 1000000);
+        showSpeed('upload-value', samples[samples.length - 1]);
+        setBar('upload-bar', Math.min(100, samples[samples.length - 1] / 5));
+      }
+      samples.sort((a, b) => a - b);
+      return samples[Math.floor(samples.length / 2)];
     }
+
     async function runTest() {
       if (state.running) return; 
       state.running = true; 
