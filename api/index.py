@@ -1,7 +1,9 @@
 import json
 import os
+import time
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
+
 
 def first_header(handler, names, default=""):
     for name in names:
@@ -10,12 +12,14 @@ def first_header(handler, names, default=""):
             return value.split(",")[0].strip()
     return default
 
+
 def get_client_ip(handler):
     return first_header(
         handler,
         ("x-forwarded-for", "x-real-ip", "cf-connecting-ip"),
         "127.0.0.1",
     )
+
 
 def network_report(handler):
     ip = get_client_ip(handler)
@@ -28,6 +32,7 @@ def network_report(handler):
     region = handler.headers.get("x-vercel-ip-country-region", "")
     city = handler.headers.get("x-vercel-ip-city", "")
     location = ", ".join(part for part in (city, region, country) if part)
+
     if not location:
         location = "Local development" if is_local else "Location unavailable"
 
@@ -43,8 +48,9 @@ def network_report(handler):
     if not https_ok:
         indicators.append("Connection is not using HTTPS")
 
-    safe = https_ok and not (forwarded.count(",") > 1 or via)
+    safe = https_ok and not (forwarded.count(",") > 1 or bool(via))
     verdict = "Safe" if safe else "Exposed"
+
     return {
         "ip": ip,
         "location": location,
@@ -61,11 +67,13 @@ def network_report(handler):
         "risk_factors": indicators,
     }
 
+
 def requested_size(query):
     try:
-        return min(max(int(query.get("size", [128])[0]), 16), 4096)
+        return min(max(int(query.get("size", ["128"])[0]), 16), 4096)
     except (TypeError, ValueError):
         return 128
+
 
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status=200):
@@ -95,41 +103,48 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        parsed_url = urlparse(self.path)
-        path = parsed_url.path
-        query = parse_qs(parsed_url.query)
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+        query = parse_qs(parsed.query)
 
-        # Handle route matching flexibly regardless of prefix mapping
-        if "ping" in path:
-            self._send_json({"ok": True, "timestamp": __import__("time").time()})
+        # More precise route matching
+        if path.endswith("/ping") or path.endswith("ping"):
+            self._send_json({"ok": True, "timestamp": time.time()})
             return
 
-        if "download" in path:
+        if path.endswith("/download") or path.endswith("download"):
             size_kb = requested_size(query)
             self._send_bytes(b"0" * (size_kb * 1024))
             return
 
-        if "info" in path or "network" in path or path.endswith("/api") or path == "/" or path == "/api" or path == "/api/":
+        if (
+            path.endswith("/info")
+            or path.endswith("/network")
+            or path.endswith("/api")
+            or path in ("", "/")
+        ):
             self._send_json(network_report(self))
             return
 
         self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
 
     def do_POST(self):
-        parsed_url = urlparse(self.path)
-        path = parsed_url.path
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+
         try:
             content_length = max(0, min(int(self.headers.get("Content-Length", "0")), 1024 * 1024))
         except (TypeError, ValueError):
             content_length = 0
-            
-        if "ping" in path or "upload" in path:
-            if content_length:
-                self.rfile.read(min(content_length, 1024 * 1024))
+
+        if path.endswith("/ping") or path.endswith("ping") or path.endswith("/upload") or path.endswith("upload"):
+            if content_length > 0:
+                self.rfile.read(content_length)
             self._send_json({"ok": True, "received": content_length})
             return
-            
+
         self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
 
     def log_message(self, format, *args):
+        # Silence default logging
         return
