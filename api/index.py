@@ -120,7 +120,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"ok": True, "timestamp": time.time()})
                 return
 
-            if "download" in path:
+            if path.rstrip("/") in ("/download", "/api/download"):
                 size_kb = requested_size(query)
                 self._send_bytes(b"0" * (size_kb * 1024))
                 return
@@ -150,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
             except (TypeError, ValueError):
                 content_length = 0
 
-            if "ping" in path or "upload" in path:
+            if path.rstrip("/") in ("/ping", "/api/ping", "/upload", "/api/upload"):
                 if content_length > 0:
                     self.rfile.read(content_length)
                 self._send_json({"ok": True, "received": content_length})
