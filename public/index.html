@@ -70,13 +70,13 @@
           </div>
           <div class="grid gap-3 sm:grid-cols-3 md:grid-cols-1"><div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Latency</span><span>ms</span></div><div class="mt-2 font-display text-3xl text-white"><span id="ping-value">--</span><span class="ml-1 text-sm text-slate-500">ms</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="ping-bar" class="h-full w-0 rounded-full bg-cyan-300 transition-all duration-700"></div></div></div><div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Download</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="download-value">--</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="download-bar" class="h-full w-0 rounded-full bg-indigo-300 transition-all duration-700"></div></div></div><div class="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div class="flex justify-between text-xs text-slate-500"><span>Upload</span><span>Mbps</span></div><div class="mt-2 font-display text-3xl text-white"><span id="upload-value">--</span></div><div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div id="upload-bar" class="h-full w-0 rounded-full bg-violet-300 transition-all duration-700"></div></div></div></div>
         </div>
-        <button id="start-test" class="group flex w-full items-center justify-center gap-3 rounded-2xl bg-cyan-300 px-5 py-4 font-semibold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300/50"><span id="button-label">Start full test</span><span class="transition group-hover:translate-x-1">→</span></button>
+        <button id="start-test" class="group flex w-full items-center justify-center gap-3 rounded-2xl bg-cyan-300 px-5 py-4 font-semibold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300/50"><span id="button-label">Start speed test</span><span class="transition group-hover:translate-x-1">→</span></button>
         <p id="test-note" class="mt-3 text-center text-[11px] text-slate-600">Uses a small sample and measures the deployed edge route.</p>
       </div>
 
       <aside class="space-y-5">
-        <div class="glass fade-up rounded-3xl p-6" style="animation-delay:260ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Network identity</p><h2 class="mt-2 font-display text-xl">Your edge view</h2></div><span class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-300/10 text-indigo-200">⌁</span></div><div class="mt-6 space-y-4"><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Public IP</p><p id="ip-value" class="mt-1 break-all font-display text-lg text-white">Loading...</p></div><div class="grid grid-cols-2 gap-4"><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Location</p><p id="location-value" class="mt-1 text-sm text-slate-300">--</p></div><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">ISP / edge</p><p id="isp-value" class="mt-1 text-sm text-slate-300">--</p></div></div></div></div>
-        <div class="glass fade-up rounded-3xl p-6" style="animation-delay:340ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Safety scan</p><h2 class="mt-2 font-display text-xl">Connection posture</h2></div><span id="safety-badge" class="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200">Checking</span></div><div class="mt-5 space-y-3 text-sm"><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Transport encryption</span><span id="https-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Forwarding signals</span><span id="proxy-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between"><span class="text-slate-400">Report freshness</span><span class="text-cyan-200">Live</span></div></div><p id="safety-note" class="mt-5 text-xs leading-5 text-slate-500">Reading the headers visible to the edge function.</p></div>
+        <div class="glass fade-up rounded-3xl p-6" style="animation-delay:260ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Network identity</p><h2 class="mt-2 font-display text-xl">Your edge view</h2></div><span class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-300/10 text-indigo-200">⌁</span></div><div class="mt-6 space-y-4"><div><div class="flex items-center justify-between gap-3"><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Public IP</p><button id="copy-ip" type="button" disabled class="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Copy public IP address">Copy IP</button></div><p id="ip-value" class="mt-1 break-all font-display text-lg text-white">Loading...</p><p id="copy-status" class="mt-1 min-h-4 text-[11px] text-cyan-200" aria-live="polite"></p></div><div class="grid grid-cols-2 gap-4"><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Location</p><p id="location-value" class="mt-1 text-sm text-slate-300">--</p></div><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">ISP / edge</p><p id="isp-value" class="mt-1 text-sm text-slate-300">--</p></div></div></div></div>
+        <div class="glass fade-up rounded-3xl p-6" style="animation-delay:340ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Safety scan</p><h2 class="mt-2 font-display text-xl">Connection posture</h2></div><span id="safety-badge" class="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200">Checking</span></div><div class="mt-5 space-y-3 text-sm"><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Transport encryption</span><span id="https-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Forwarding signals</span><span id="proxy-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between"><span class="text-slate-400">Report freshness</span><span class="text-cyan-200">Live</span></div></div><p id="safety-note" class="mt-5 text-xs leading-5 text-slate-500">Checking whether this connection appears safe to use.</p></div>
       </aside>
     </section>
 
@@ -95,13 +95,25 @@
         const response = await fetch(endpoint('/api/info'), { cache: 'no-store' });
         if (!response.ok) throw new Error('Network info unavailable');
         const data = await response.json();
-        setText('ip-value', data.ip || '--'); setText('location-value', data.location || '--'); setText('isp-value', data.isp || '--');
+        setText('ip-value', data.ip || '--'); setText('location-value', data.location || '--'); setText('isp-value', data.isp || '--'); $('copy-ip').disabled = !data.ip;
         const protectedState = data.safety === 'protected';
-        setText('safety-badge', protectedState ? 'Protected' : 'Review');
+        setText('safety-badge', protectedState ? 'Safe to use' : 'Review connection');
         $('safety-badge').className = protectedState ? 'rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200' : 'rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200';
         setText('https-status', data.is_https ? 'Encrypted' : 'Unencrypted'); setText('proxy-status', data.indicators?.length ? 'Detected' : 'Clear');
-        setText('safety-note', data.indicators?.length ? data.indicators.join(' · ') : 'No obvious proxy indicators were exposed to the edge function.');
-      } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The API could not be reached.'); setText('safety-badge', 'Offline'); }
+        setText('safety-note', data.indicators?.length ? `Review needed: ${data.indicators.join(' · ')}` : 'No obvious safety concerns were exposed to the edge function.');
+      } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The safety check could not be completed.'); setText('safety-badge', 'Check unavailable'); $('copy-ip').disabled = true; }
+    }
+
+    async function copyIpAddress() {
+      const ip = $('ip-value').textContent;
+      if (!ip || ip === '--' || ip === 'Unavailable' || ip === 'Loading...') return;
+      try {
+        await navigator.clipboard.writeText(ip);
+      } catch (error) {
+        const input = document.createElement('textarea'); input.value = ip; input.style.position = 'fixed'; input.style.opacity = '0'; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
+      }
+      setText('copy-status', 'IP address copied');
+      setTimeout(() => setText('copy-status', ''), 2200);
     }
 
     async function measurePing() {
@@ -122,7 +134,7 @@
     }
 
     async function runTest() {
-      if (state.running) return; state.running = true; $('start-test').disabled = true; setText('button-label', 'Testing route...'); setText('test-state', 'Measuring latency'); setText('hero-label', 'Checking edge latency');
+      if (state.running) return; state.running = true; $('start-test').disabled = true; setText('button-label', 'Testing connection...'); setText('test-state', 'Measuring latency'); setText('hero-label', 'Checking edge latency');
       try {
         const ping = await measurePing(); setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping)); setText('test-state', 'Measuring download'); setText('hero-label', 'Pulling a sample');
         const download = Number((await measureDownload()).toFixed(1)); setText('download-value', download); setText('hero-value', download); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, download * 4)}`; setBar('download-bar', Math.min(100, download / 5)); setText('test-state', 'Measuring upload'); setText('hero-label', 'Pushing a sample');
@@ -131,7 +143,7 @@
       state.running = false; $('start-test').disabled = false;
     }
 
-    $('start-test').addEventListener('click', runTest); loadNetworkInfo();
+    $('start-test').addEventListener('click', runTest); $('copy-ip').addEventListener('click', copyIpAddress); loadNetworkInfo();
   </script>
 </body>
 </html>
