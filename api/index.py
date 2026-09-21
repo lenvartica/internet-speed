@@ -1,10 +1,7 @@
-"""Vercel serverless endpoint for Decan Internet Test."""
-
 import json
 import os
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
-
 
 def first_header(handler, names, default=""):
     for name in names:
@@ -13,14 +10,12 @@ def first_header(handler, names, default=""):
             return value.split(",")[0].strip()
     return default
 
-
 def get_client_ip(handler):
     return first_header(
         handler,
         ("x-forwarded-for", "x-real-ip", "cf-connecting-ip"),
         "127.0.0.1",
     )
-
 
 def network_report(handler):
     ip = get_client_ip(handler)
@@ -66,13 +61,11 @@ def network_report(handler):
         "risk_factors": indicators,
     }
 
-
 def requested_size(query):
     try:
         return min(max(int(query.get("size", [128])[0]), 16), 4096)
     except (TypeError, ValueError):
         return 128
-
 
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status=200):
@@ -97,41 +90,46 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def do_GET(self):
-        path = urlparse(self.path).path
-        query = parse_qs(urlparse(self.path).query)
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        query = parse_qs(parsed_url.query)
 
-        if path.endswith("/ping"):
+        # Handle route matching flexibly regardless of prefix mapping
+        if "ping" in path:
             self._send_json({"ok": True, "timestamp": __import__("time").time()})
             return
 
-        if path.endswith("/download"):
+        if "download" in path:
             size_kb = requested_size(query)
             self._send_bytes(b"0" * (size_kb * 1024))
             return
 
-        if path.endswith("/info") or path.endswith("/network") or path.endswith("/api") or path.endswith("/index.py"):
+        if "info" in path or "network" in path or path.endswith("/api") or path == "/" or path == "/api" or path == "/api/":
             self._send_json(network_report(self))
             return
 
-        self._send_json({"ok": False, "error": "Not found"}, 404)
+        self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
 
     def do_POST(self):
-        path = urlparse(self.path).path
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
         try:
             content_length = max(0, min(int(self.headers.get("Content-Length", "0")), 1024 * 1024))
         except (TypeError, ValueError):
             content_length = 0
-        if path.endswith("/ping"):
+            
+        if "ping" in path or "upload" in path:
             if content_length:
                 self.rfile.read(min(content_length, 1024 * 1024))
             self._send_json({"ok": True, "received": content_length})
             return
-        self._send_json({"ok": False, "error": "Not found"}, 404)
+            
+        self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
 
     def log_message(self, format, *args):
         return
