@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "functions": {
     "api/index.py": {
-      "runtime": "python3.12"
+      "runtime": "python@3.12"
     }
   },
   "rewrites": [
