@@ -77,23 +77,30 @@ def requested_size(query):
 
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status=200):
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store, max-age=0")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception:
+            # Last resort – try to send something
+            pass
 
     def _send_bytes(self, payload):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/octet-stream")
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-        self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(payload)
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(payload)
+        except Exception:
+            pass
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -103,47 +110,56 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        parsed = urlparse(self.path)
-        path = parsed.path.rstrip("/")
-        query = parse_qs(parsed.query)
+        try:
+            parsed = urlparse(self.path)
+            path = parsed.path.lower()          # make matching case-insensitive
+            query = parse_qs(parsed.query)
 
-        # More precise route matching
-        if path.endswith("/ping") or path.endswith("ping"):
-            self._send_json({"ok": True, "timestamp": time.time()})
-            return
+            # Very forgiving matching (works with /api/ping, /ping, /something/ping/, etc.)
+            if "ping" in path:
+                self._send_json({"ok": True, "timestamp": time.time()})
+                return
 
-        if path.endswith("/download") or path.endswith("download"):
-            size_kb = requested_size(query)
-            self._send_bytes(b"0" * (size_kb * 1024))
-            return
+            if "download" in path:
+                size_kb = requested_size(query)
+                self._send_bytes(b"0" * (size_kb * 1024))
+                return
 
-        if (
-            path.endswith("/info")
-            or path.endswith("/network")
-            or path.endswith("/api")
-            or path in ("", "/")
-        ):
-            self._send_json(network_report(self))
-            return
+            # info / network / root / api
+            if (
+                "info" in path
+                or "network" in path
+                or path.rstrip("/") in ("", "/", "/api")
+                or path.endswith("/api")
+            ):
+                self._send_json(network_report(self))
+                return
 
-        self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
+            self._send_json({"ok": False, "error": "Not found", "path": self.path}, 404)
+
+        except Exception as e:
+            self._send_json({"ok": False, "error": "Internal server error", "detail": str(e)}, 500)
 
     def do_POST(self):
-        parsed = urlparse(self.path)
-        path = parsed.path.rstrip("/")
-
         try:
-            content_length = max(0, min(int(self.headers.get("Content-Length", "0")), 1024 * 1024))
-        except (TypeError, ValueError):
-            content_length = 0
+            parsed = urlparse(self.path)
+            path = parsed.path.lower()
 
-        if path.endswith("/ping") or path.endswith("ping") or path.endswith("/upload") or path.endswith("upload"):
-            if content_length > 0:
-                self.rfile.read(content_length)
-            self._send_json({"ok": True, "received": content_length})
-            return
+            try:
+                content_length = max(0, min(int(self.headers.get("Content-Length", "0")), 1024 * 1024))
+            except (TypeError, ValueError):
+                content_length = 0
 
-        self._send_json({"ok": False, "error": "Not found", "path": path}, 404)
+            if "ping" in path or "upload" in path:
+                if content_length > 0:
+                    self.rfile.read(content_length)
+                self._send_json({"ok": True, "received": content_length})
+                return
+
+            self._send_json({"ok": False, "error": "Not found", "path": self.path}, 404)
+
+        except Exception as e:
+            self._send_json({"ok": False, "error": "Internal server error", "detail": str(e)}, 500)
 
     def log_message(self, format, *args):
         # Silence default logging
