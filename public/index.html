@@ -14,7 +14,12 @@
       theme: {
         extend: {
           fontFamily: { display: ['Space Grotesk', 'sans-serif'], sans: ['DM Sans', 'sans-serif'] },
-          colors: { ink: '#070b12', panel: '#0d131e', cyan: '#73e6f3', violet: '#9c8cff' }
+          colors: { 
+            ink: '#070b12', 
+            panel: '#0d131e', 
+            violet: '#9c8cff'
+            // cyan is NO LONGER overridden – full cyan-50 → cyan-950 scale now works
+          }
         }
       }
     };
@@ -41,7 +46,6 @@
   <div class="grid-bg fixed inset-0 -z-10"></div>
   <div class="fixed left-[-10rem] top-[-10rem] -z-10 h-96 w-96 rounded-full bg-cyan-400/10 blur-[120px]"></div>
   <div class="fixed bottom-[-12rem] right-[-8rem] -z-10 h-96 w-96 rounded-full bg-indigo-500/10 blur-[130px]"></div>
-
   <header class="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-10">
     <a href="/" class="flex items-center gap-3" aria-label="Decan Internet Test home">
       <span class="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 font-display text-lg font-bold text-cyan-200">D</span>
@@ -49,7 +53,6 @@
     </a>
     <div class="flex items-center gap-2 text-xs text-slate-400"><span class="pulse-dot h-2 w-2 rounded-full bg-cyan-300"></span><span id="edge-status">Edge ready</span></div>
   </header>
-
   <main class="mx-auto max-w-7xl px-5 pb-14 lg:px-10">
     <section class="mb-8 flex flex-col justify-between gap-7 pt-8 md:flex-row md:items-end md:pt-14">
       <div class="fade-up max-w-2xl">
@@ -59,7 +62,6 @@
       </div>
       <div class="fade-up flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[.03] px-4 py-3 text-xs text-slate-400" style="animation-delay:120ms"><span class="text-slate-600">TEST MODE</span><span class="rounded-lg bg-cyan-300/10 px-2.5 py-1.5 font-semibold text-cyan-200">LIVE EDGE</span></div>
     </section>
-
     <section class="grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
       <div class="glass glow fade-up rounded-3xl p-6 sm:p-8" style="animation-delay:180ms">
         <div class="flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Real-time benchmark</p><h2 class="mt-2 font-display text-xl text-white">Your connection pulse</h2></div><span id="test-state" class="rounded-full border border-white/10 px-3 py-1 text-[11px] text-slate-400">Ready to test</span></div>
@@ -75,12 +77,14 @@
           </div>
         </div>
         
-        <!-- Enhanced Button with Gradient, Glow Shadow, and Hover/Scale Effects -->
-        <button id="start-test" type="button" class="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 px-5 py-4 font-bold text-slate-950 shadow-[0_0_25px_rgba(115,230,243,0.35)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_35px_rgba(115,230,243,0.6)] focus:outline-none focus:ring-4 focus:ring-cyan-300/50"><span id="button-label" class="text-base tracking-wide">Start speed test</span><span class="transition-transform duration-300 group-hover:translate-x-1.5 font-extrabold text-lg">→</span></button>
+        <!-- Fixed Button – now fully visible -->
+        <button id="start-test" type="button" class="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 px-5 py-4 font-bold text-slate-950 shadow-[0_0_25px_rgba(115,230,243,0.35)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_35px_rgba(115,230,243,0.6)] focus:outline-none focus:ring-4 focus:ring-cyan-300/50">
+          <span id="button-label" class="text-base tracking-wide">Start speed test</span>
+          <span class="transition-transform duration-300 group-hover:translate-x-1.5 font-extrabold text-lg">→</span>
+        </button>
         
         <p id="test-note" class="mt-3 text-center text-[11px] text-slate-500">Uses a small sample and measures the deployed edge route.</p>
       </div>
-
       <aside class="space-y-5">
         <div class="glass fade-up rounded-3xl p-6" style="animation-delay:260ms">
           <div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Network identity</p><h2 class="mt-2 font-display text-xl">Your edge view</h2></div><span class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-300/10 text-indigo-200">⌁</span></div>
@@ -96,10 +100,8 @@
         <div class="glass fade-up rounded-3xl p-6" style="animation-delay:420ms"><p class="text-xs uppercase tracking-[.22em] text-slate-500">Privacy signals</p><h2 class="mt-2 font-display text-xl">What this browser can see</h2><div class="mt-5 space-y-3 text-sm"><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Wi-Fi type</span><span id="wifi-status" class="text-right text-slate-300">Not detectable</span></div><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">IP exposure</span><span id="exposure-status" class="text-right text-slate-300">Checking</span></div><div class="flex items-center justify-between"><span class="text-slate-400">Spyware detection</span><span id="privacy-status" class="text-right text-slate-300">Not possible in browser</span></div></div><p class="mt-5 text-xs leading-5 text-slate-500">A browser cannot identify the Wi-Fi owner, read its password, or prove that someone is spying. Use HTTPS, a trusted network, and a VPN when appropriate.</p></div>
       </aside>
     </section>
-
     <footer class="mt-8 flex flex-col justify-between gap-3 border-t border-white/10 pt-5 text-[11px] text-slate-600 sm:flex-row"><span>DECAN / Network analysis, kept readable.</span><span>Results vary with time, device, and route.</span></footer>
   </main>
-
   <script>
     const $ = (id) => document.getElementById(id);
     const state = { running: false, progressTimer: null };
@@ -108,12 +110,10 @@
     const setBar = (id, percent) => { $(id).style.width = `${Math.max(3, Math.min(100, percent))}%`; };
     const formatSpeed = (megabits) => megabits < 1 ? { value: `${(megabits * 1000).toFixed(0)}`, unit: 'Kbps' } : { value: megabits.toFixed(1), unit: 'Mbps' };
     const showSpeed = (id, megabits) => { const speed = formatSpeed(megabits); setText(id, speed.value); if (id === 'hero-value') setText('hero-unit', speed.unit); return speed; };
-
     function stopLiveProgress() {
       if (state.progressTimer) clearInterval(state.progressTimer);
       state.progressTimer = null;
     }
-
     function startLiveProgress(phase) {
       stopLiveProgress();
       let tick = 0;
@@ -130,7 +130,6 @@
         }
       }, 180);
     }
-
     async function loadNetworkInfo() {
       try {
         const response = await fetch(endpoint('/api/info'), { cache: 'no-store' });
@@ -145,7 +144,6 @@
         setText('exposure-status', data.ip ? 'Public IP visible' : 'Unknown'); setText('privacy-status', data.indicators?.length ? 'Review forwarding' : 'No proxy signal');
       } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The safety check could not be completed.'); setText('safety-badge', 'Check unavailable'); $('copy-ip').disabled = true; setText('exposure-status', 'Unknown'); setText('privacy-status', 'Check unavailable'); }
     }
-
     async function copyIpAddress() {
       const ip = $('ip-value').textContent;
       if (!ip || ip === '--' || ip === 'Unavailable' || ip === 'Loading...') return;
@@ -157,13 +155,11 @@
       setText('copy-status', 'IP address copied');
       setTimeout(() => setText('copy-status', ''), 2200);
     }
-
     async function measurePing() {
       const samples = [];
       for (let i = 0; i < 3; i++) { const started = performance.now(); const response = await fetch(endpoint('/api/ping'), { cache: 'no-store' }); if (!response.ok) throw new Error('Ping route unavailable'); samples.push(performance.now() - started); }
       return Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
     }
-
     async function measureDownload() {
       const sizes = [16, 64, 256, 1024, 4096]; let totalBytes = 0; const started = performance.now(); let sizeIndex = 0;
       while (sizeIndex < 8) {
@@ -174,13 +170,11 @@
       }
       return Math.max(0.001, (totalBytes * 8) / ((performance.now() - started) / 1000) / 1000000);
     }
-
     async function measureUpload() {
       const payload = new Blob([new Uint8Array(1024 * 1024)]); const started = performance.now();
       const response = await fetch(endpoint('/api/ping'), { method: 'POST', body: payload, cache: 'no-store' }); if (!response.ok) throw new Error('Upload route unavailable');
       return Math.max(0.001, (payload.size * 8) / ((performance.now() - started) / 1000) / 1000000);
     }
-
     async function runTest() {
       if (state.running) return; 
       state.running = true; 
@@ -226,7 +220,6 @@
       state.running = false; 
       $('start-test').disabled = false;
     }
-
     document.addEventListener('DOMContentLoaded', () => {
       $('start-test').addEventListener('click', runTest);$('copy-ip').addEventListener('click', copyIpAddress);
       loadNetworkInfo();
