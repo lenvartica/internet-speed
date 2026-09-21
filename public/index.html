@@ -87,9 +87,11 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const state = { running: false, progressTimer: null };
-    const endpoint = (path) => `${path}${path.includes('?') ? '&' : '?'}t=${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const endpoint = (path) => `${path}${path.includes('?') ? '&' : '?'}cache=${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const setText = (id, value) => { $(id).textContent = value; };
     const setBar = (id, percent) => { $(id).style.width = `${Math.max(3, Math.min(100, percent))}%`; };
+    const formatSpeed = (megabits) => megabits < 1 ? { value: `${(megabits * 1000).toFixed(0)}`, unit: 'Kbps' } : { value: megabits.toFixed(1), unit: 'Mbps' };
+    const showSpeed = (id, megabits) => { const speed = formatSpeed(megabits); setText(id, speed.value); if (id === 'hero-value') setText('hero-unit', speed.unit); return speed; };
 
     function stopLiveProgress() {
       if (state.progressTimer) clearInterval(state.progressTimer);
@@ -106,7 +108,7 @@
           setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping));
         } else {
           const value = Number((28 + Math.abs(Math.sin(tick / 2.5)) * 42 + Math.random() * 8).toFixed(1));
-          setText('hero-value', value); setText(phase === 'download' ? 'download-value' : 'upload-value', value);
+          showSpeed('hero-value', value); showSpeed(phase === 'download' ? 'download-value' : 'upload-value', value);
           setBar(`${phase}-bar`, Math.min(100, value / 5));
           if (phase === 'download') $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, value * 4)}`;
         }
@@ -119,11 +121,11 @@
         if (!response.ok) throw new Error('Network info unavailable');
         const data = await response.json();
         setText('ip-value', data.ip || '--'); setText('location-value', data.location || '--'); setText('isp-value', data.isp || '--'); $('copy-ip').disabled = !data.ip;
-        const protectedState = data.safety === 'protected';
-        setText('safety-badge', protectedState ? 'Safe to use' : 'Review connection');
+        const protectedState = data.verdict === 'Safe' || data.safety === 'protected';
+        setText('safety-badge', protectedState ? 'Safe' : 'Exposed');
         $('safety-badge').className = protectedState ? 'rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200' : 'rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200';
         setText('https-status', data.is_https ? 'Encrypted' : 'Unencrypted'); setText('proxy-status', data.indicators?.length ? 'Detected' : 'Clear');
-        setText('safety-note', data.indicators?.length ? `Review needed: ${data.indicators.join(' · ')}` : 'No obvious safety concerns were exposed to the edge function.');
+        setText('safety-note', data.indicators?.length ? `Review needed: ${data.indicators.join(' · ')}` : 'Encrypted transport and no forwarding risks were observed.');
         setText('exposure-status', data.ip ? 'Public IP visible' : 'Unknown'); setText('privacy-status', data.indicators?.length ? 'Review forwarding' : 'No proxy signal');
       } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The safety check could not be completed.'); setText('safety-badge', 'Check unavailable'); $('copy-ip').disabled = true; setText('exposure-status', 'Unknown'); setText('privacy-status', 'Check unavailable'); }
     }
@@ -142,19 +144,25 @@
 
     async function measurePing() {
       const samples = [];
-      for (let i = 0; i < 3; i++) { const started = performance.now(); await fetch(endpoint('/api/ping'), { cache: 'no-store' }); samples.push(performance.now() - started); }
+      for (let i = 0; i < 3; i++) { const started = performance.now(); const response = await fetch(endpoint('/api/ping'), { cache: 'no-store' }); if (!response.ok) throw new Error('Ping route unavailable'); samples.push(performance.now() - started); }
       return Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
     }
 
     async function measureDownload() {
-      const started = performance.now(); const response = await fetch(endpoint('/api/download?size=256'), { cache: 'no-store' }); await response.json();
-      return Math.max(0.1, (256 * 8) / ((performance.now() - started) / 1000) / 1024);
+      const sizes = [16, 64, 256, 1024, 4096]; let totalBytes = 0; const started = performance.now(); let sizeIndex = 0;
+      while (sizeIndex < 8) {
+        const size = sizes[Math.min(sizeIndex, sizes.length - 1)]; const response = await fetch(endpoint(`/api/download?size=${size}`), { cache: 'no-store' }); if (!response.ok || !response.body) throw new Error('Download route unavailable');
+        const reader = response.body.getReader(); let sampleBytes = 0; let reading = true;
+        while (reading) { const chunk = await reader.read(); if (chunk.done) { reading = false; } else { sampleBytes += chunk.value.byteLength; totalBytes += chunk.value.byteLength; const elapsed = (performance.now() - started) / 1000; const liveMbps = (totalBytes * 8) / elapsed / 1000000; showSpeed('hero-value', liveMbps); showSpeed('download-value', liveMbps); setBar('download-bar', Math.min(100, liveMbps / 5)); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, liveMbps * 4)}`; } }
+        const elapsed = (performance.now() - started) / 1000; if (elapsed >= 1.2 || sampleBytes < size * 1024) break; sizeIndex += 1;
+      }
+      return Math.max(0.001, (totalBytes * 8) / ((performance.now() - started) / 1000) / 1000000);
     }
 
     async function measureUpload() {
-      const payload = new Blob([new Uint8Array(96 * 1024)]); const started = performance.now();
-      await fetch(endpoint('/api/ping'), { method: 'POST', body: payload, cache: 'no-store' }).catch(() => {});
-      return Math.max(0.1, (96 * 8) / ((performance.now() - started) / 1000) / 1024);
+      const payload = new Blob([new Uint8Array(1024 * 1024)]); const started = performance.now();
+      const response = await fetch(endpoint('/api/ping'), { method: 'POST', body: payload, cache: 'no-store' }); if (!response.ok) throw new Error('Upload route unavailable');
+      return Math.max(0.001, (payload.size * 8) / ((performance.now() - started) / 1000) / 1000000);
     }
 
     async function runTest() {
@@ -162,13 +170,13 @@
       setText('hero-value', '--'); setText('ping-value', '--'); setText('download-value', '--'); setText('upload-value', '--'); setBar('ping-bar', 0); setBar('download-bar', 0); setBar('upload-bar', 0); $('gauge-ring').style.strokeDashoffset = '616';
       try {
         startLiveProgress('ping'); const ping = await measurePing(); stopLiveProgress(); setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping)); setText('test-state', 'Measuring download'); setText('hero-label', 'Pulling a sample');
-        startLiveProgress('download'); const download = Number((await measureDownload()).toFixed(1)); stopLiveProgress(); setText('download-value', download); setText('hero-value', download); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, download * 4)}`; setBar('download-bar', Math.min(100, download / 5)); setText('test-state', 'Measuring upload'); setText('hero-label', 'Pushing a sample');
-        startLiveProgress('upload'); const upload = Number((await measureUpload()).toFixed(1)); stopLiveProgress(); setText('upload-value', upload); setBar('upload-bar', Math.min(100, upload / 5)); setText('test-state', 'Test complete'); setText('hero-label', 'Your measured download'); setText('button-label', 'Test again'); setText('edge-status', 'Edge measured');
+        stopLiveProgress(); const download = await measureDownload(); showSpeed('hero-value', download); showSpeed('download-value', download); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, download * 4)}`; setBar('download-bar', Math.min(100, download / 5)); setText('test-state', 'Measuring upload'); setText('hero-label', 'Pushing a sample');
+        startLiveProgress('upload'); const upload = await measureUpload(); stopLiveProgress(); showSpeed('upload-value', upload); setBar('upload-bar', Math.min(100, upload / 5)); setText('test-state', 'Test complete'); setText('hero-label', 'Your measured download'); setText('button-label', 'Test again'); setText('edge-status', 'Edge measured');
       } catch (error) { stopLiveProgress(); setText('test-state', 'Test unavailable'); setText('hero-label', 'Could not reach test route'); setText('button-label', 'Try again'); }
       state.running = false; $('start-test').disabled = false;
     }
 
-    $('start-test').addEventListener('click', runTest); $('copy-ip').addEventListener('click', copyIpAddress); loadNetworkInfo();
+    $('start-test').addEventListener('click', runTest); $('copy-ip').addEventListener('click', copyIpAddress); loadNetworkInfo(); setTimeout(runTest, 650);
   </script>
 </body>
 </html>

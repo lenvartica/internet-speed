@@ -49,6 +49,7 @@ def network_report(handler):
         indicators.append("Connection is not using HTTPS")
 
     safe = https_ok and not (forwarded.count(",") > 1 or via)
+    verdict = "Safe" if safe else "Exposed"
     return {
         "ip": ip,
         "location": location,
@@ -59,7 +60,18 @@ def network_report(handler):
         "is_local": is_local,
         "indicators": indicators,
         "safety": "protected" if safe else "warning",
+        "verdict": verdict,
+        "wifi_assessment": "Not detectable from server headers",
+        "dns_leak_check": "Not available from browser headers",
+        "risk_factors": indicators,
     }
+
+
+def requested_size(query):
+    try:
+        return min(max(int(query.get("size", [128])[0]), 16), 4096)
+    except (TypeError, ValueError):
+        return 128
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -72,6 +84,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_bytes(self, payload):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(payload)
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -89,9 +110,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path.endswith("/download"):
-            size_kb = min(max(int(query.get("size", [128])[0]), 16), 512)
-            payload = "0" * (size_kb * 1024)
-            self._send_json({"ok": True, "payload": payload})
+            size_kb = requested_size(query)
+            self._send_bytes(b"0" * (size_kb * 1024))
             return
 
         if path.endswith("/info") or path.endswith("/network") or path.endswith("/api") or path.endswith("/index.py"):
@@ -102,7 +122,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        content_length = int(self.headers.get("Content-Length", "0"))
+        try:
+            content_length = max(0, min(int(self.headers.get("Content-Length", "0")), 1024 * 1024))
+        except (TypeError, ValueError):
+            content_length = 0
         if path.endswith("/ping"):
             if content_length:
                 self.rfile.read(min(content_length, 1024 * 1024))
