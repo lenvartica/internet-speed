@@ -1,11 +1,6 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "functions": {
-    "api/index.py": {
-      "runtime": "python@3.12"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
