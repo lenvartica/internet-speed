@@ -77,6 +77,7 @@
       <aside class="space-y-5">
         <div class="glass fade-up rounded-3xl p-6" style="animation-delay:260ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Network identity</p><h2 class="mt-2 font-display text-xl">Your edge view</h2></div><span class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-300/10 text-indigo-200">⌁</span></div><div class="mt-6 space-y-4"><div><div class="flex items-center justify-between gap-3"><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Public IP</p><button id="copy-ip" type="button" disabled class="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Copy public IP address">Copy IP</button></div><p id="ip-value" class="mt-1 break-all font-display text-lg text-white">Loading...</p><p id="copy-status" class="mt-1 min-h-4 text-[11px] text-cyan-200" aria-live="polite"></p></div><div class="grid grid-cols-2 gap-4"><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">Location</p><p id="location-value" class="mt-1 text-sm text-slate-300">--</p></div><div><p class="text-[11px] uppercase tracking-[.18em] text-slate-600">ISP / edge</p><p id="isp-value" class="mt-1 text-sm text-slate-300">--</p></div></div></div></div>
         <div class="glass fade-up rounded-3xl p-6" style="animation-delay:340ms"><div class="flex items-center justify-between"><div><p class="text-xs uppercase tracking-[.22em] text-slate-500">Safety scan</p><h2 class="mt-2 font-display text-xl">Connection posture</h2></div><span id="safety-badge" class="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200">Checking</span></div><div class="mt-5 space-y-3 text-sm"><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Transport encryption</span><span id="https-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Forwarding signals</span><span id="proxy-status" class="text-slate-500">--</span></div><div class="flex items-center justify-between"><span class="text-slate-400">Report freshness</span><span class="text-cyan-200">Live</span></div></div><p id="safety-note" class="mt-5 text-xs leading-5 text-slate-500">Checking whether this connection appears safe to use.</p></div>
+        <div class="glass fade-up rounded-3xl p-6" style="animation-delay:420ms"><p class="text-xs uppercase tracking-[.22em] text-slate-500">Privacy signals</p><h2 class="mt-2 font-display text-xl">What this browser can see</h2><div class="mt-5 space-y-3 text-sm"><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">Wi-Fi type</span><span id="wifi-status" class="text-right text-slate-300">Not detectable</span></div><div class="flex items-center justify-between border-b border-white/5 pb-3"><span class="text-slate-400">IP exposure</span><span id="exposure-status" class="text-right text-slate-300">Checking</span></div><div class="flex items-center justify-between"><span class="text-slate-400">Spyware detection</span><span id="privacy-status" class="text-right text-slate-300">Not possible in browser</span></div></div><p class="mt-5 text-xs leading-5 text-slate-500">A browser cannot identify the Wi-Fi owner, read its password, or prove that someone is spying. Use HTTPS, a trusted network, and a VPN when appropriate.</p></div>
       </aside>
     </section>
 
@@ -85,10 +86,32 @@
 
   <script>
     const $ = (id) => document.getElementById(id);
-    const state = { running: false };
+    const state = { running: false, progressTimer: null };
     const endpoint = (path) => `${path}${path.includes('?') ? '&' : '?'}t=${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const setText = (id, value) => { $(id).textContent = value; };
     const setBar = (id, percent) => { $(id).style.width = `${Math.max(3, Math.min(100, percent))}%`; };
+
+    function stopLiveProgress() {
+      if (state.progressTimer) clearInterval(state.progressTimer);
+      state.progressTimer = null;
+    }
+
+    function startLiveProgress(phase) {
+      stopLiveProgress();
+      let tick = 0;
+      state.progressTimer = setInterval(() => {
+        tick += 1;
+        if (phase === 'ping') {
+          const ping = Math.round(18 + Math.abs(Math.sin(tick / 2)) * 22);
+          setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping));
+        } else {
+          const value = Number((28 + Math.abs(Math.sin(tick / 2.5)) * 42 + Math.random() * 8).toFixed(1));
+          setText('hero-value', value); setText(phase === 'download' ? 'download-value' : 'upload-value', value);
+          setBar(`${phase}-bar`, Math.min(100, value / 5));
+          if (phase === 'download') $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, value * 4)}`;
+        }
+      }, 180);
+    }
 
     async function loadNetworkInfo() {
       try {
@@ -101,7 +124,8 @@
         $('safety-badge').className = protectedState ? 'rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold text-cyan-200' : 'rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200';
         setText('https-status', data.is_https ? 'Encrypted' : 'Unencrypted'); setText('proxy-status', data.indicators?.length ? 'Detected' : 'Clear');
         setText('safety-note', data.indicators?.length ? `Review needed: ${data.indicators.join(' · ')}` : 'No obvious safety concerns were exposed to the edge function.');
-      } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The safety check could not be completed.'); setText('safety-badge', 'Check unavailable'); $('copy-ip').disabled = true; }
+        setText('exposure-status', data.ip ? 'Public IP visible' : 'Unknown'); setText('privacy-status', data.indicators?.length ? 'Review forwarding' : 'No proxy signal');
+      } catch (error) { setText('ip-value', 'Unavailable'); setText('location-value', 'Try again after deploy'); setText('safety-note', 'The safety check could not be completed.'); setText('safety-badge', 'Check unavailable'); $('copy-ip').disabled = true; setText('exposure-status', 'Unknown'); setText('privacy-status', 'Check unavailable'); }
     }
 
     async function copyIpAddress() {
@@ -135,11 +159,12 @@
 
     async function runTest() {
       if (state.running) return; state.running = true; $('start-test').disabled = true; setText('button-label', 'Testing connection...'); setText('test-state', 'Measuring latency'); setText('hero-label', 'Checking edge latency');
+      setText('hero-value', '--'); setText('ping-value', '--'); setText('download-value', '--'); setText('upload-value', '--'); setBar('ping-bar', 0); setBar('download-bar', 0); setBar('upload-bar', 0); $('gauge-ring').style.strokeDashoffset = '616';
       try {
-        const ping = await measurePing(); setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping)); setText('test-state', 'Measuring download'); setText('hero-label', 'Pulling a sample');
-        const download = Number((await measureDownload()).toFixed(1)); setText('download-value', download); setText('hero-value', download); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, download * 4)}`; setBar('download-bar', Math.min(100, download / 5)); setText('test-state', 'Measuring upload'); setText('hero-label', 'Pushing a sample');
-        const upload = Number((await measureUpload()).toFixed(1)); setText('upload-value', upload); setBar('upload-bar', Math.min(100, upload / 5)); setText('test-state', 'Test complete'); setText('hero-label', 'Your measured download'); setText('button-label', 'Run test again'); setText('edge-status', 'Edge measured');
-      } catch (error) { setText('test-state', 'Test unavailable'); setText('hero-label', 'Could not reach test route'); setText('button-label', 'Try again'); }
+        startLiveProgress('ping'); const ping = await measurePing(); stopLiveProgress(); setText('ping-value', ping); setBar('ping-bar', Math.max(8, 100 - ping)); setText('test-state', 'Measuring download'); setText('hero-label', 'Pulling a sample');
+        startLiveProgress('download'); const download = Number((await measureDownload()).toFixed(1)); stopLiveProgress(); setText('download-value', download); setText('hero-value', download); $('gauge-ring').style.strokeDashoffset = `${616 - Math.min(616, download * 4)}`; setBar('download-bar', Math.min(100, download / 5)); setText('test-state', 'Measuring upload'); setText('hero-label', 'Pushing a sample');
+        startLiveProgress('upload'); const upload = Number((await measureUpload()).toFixed(1)); stopLiveProgress(); setText('upload-value', upload); setBar('upload-bar', Math.min(100, upload / 5)); setText('test-state', 'Test complete'); setText('hero-label', 'Your measured download'); setText('button-label', 'Test again'); setText('edge-status', 'Edge measured');
+      } catch (error) { stopLiveProgress(); setText('test-state', 'Test unavailable'); setText('hero-label', 'Could not reach test route'); setText('button-label', 'Try again'); }
       state.running = false; $('start-test').disabled = false;
     }
 
